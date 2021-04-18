@@ -23,11 +23,7 @@ AFPS_CollabGameMode::AFPS_CollabGameMode()
 
 void AFPS_CollabGameMode::BeginPlay()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("GAMEMODE Message"));
-
 	FindAllActors(GetWorld(), FoundActorsSpawner);
-	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("nombre acteurs trouves = " + FString::FromInt(FoundActorsSpawner.Num())));
-
 	fDelayTimer = GetGameTimeSinceCreation();
 }
 
@@ -38,7 +34,6 @@ void AFPS_CollabGameMode::Tick(float deltaTime)
 	if (WavesSpawn[currentWave] > 0)
 	{
 		if (fDelayTimer < GetGameTimeSinceCreation()) {
-			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Passage deuxieme condition " + FString::FromInt(fDelayTimer)));
 			spawningEnnemy();
 			fDelayTimer = GetGameTimeSinceCreation() + fDelayCooldown;
 		}
@@ -60,7 +55,6 @@ void AFPS_CollabGameMode::deleteEnnemy(AMyEnnemy* ennemyToDelete)
 		if (ennemyToDelete == ennemy)
 		{
 			EnnemysInLevel.Remove(ennemy);
-			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Nombre ennemis restant = " + FString::FromInt(EnnemysInLevel.Num())));
 		}
 	}
 
@@ -81,8 +75,6 @@ void AFPS_CollabGameMode::spawningEnnemy()
 	{
 		if (Ennemy)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("wave number = " + FString::FromInt(currentWave)));
-
 			FActorSpawnParameters spawnParam;
 			spawnParam.Owner = this;
 			FRotator rotator;
@@ -91,7 +83,6 @@ void AFPS_CollabGameMode::spawningEnnemy()
 			FVector spawnLocation = FoundActorsSpawner[aleaInt]->GetActorLocation();
 			EnnemysInLevel.Add(world->SpawnActor<AMyEnnemy>(Ennemy, spawnLocation, rotator, spawnParam));
 			WavesSpawn[currentWave] -= 1;
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("SPAWN ONE ENNEMY , il faut encore spawn " + FString::FromInt(WavesSpawn[currentWave]) + " ennemis."));
 		}
 	}
 }

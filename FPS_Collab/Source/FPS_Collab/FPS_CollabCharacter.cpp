@@ -134,6 +134,7 @@ void AFPS_CollabCharacter::BeginPlay()
 	fWeaponCooldown = _weapons[1]->fWeaponCooldown;
 
 	FP_AR->SetRelativeRotation(FRotator(0.0f, 90.0f, 0.0f));
+	FP_Gun->SetHiddenInGame(true);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -269,7 +270,6 @@ void AFPS_CollabCharacter::SwitchWeapon() {
 		_currentWeaponIndex = 0;
 		FP_Gun->SetHiddenInGame(true);
 		FP_AR->SetHiddenInGame(false);
-
 	}
 }
 

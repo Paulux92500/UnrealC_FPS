@@ -26,20 +26,10 @@ void AMyWeapon::WeaponShoot(const FVector& origin, UCameraComponent* camera, con
 	FVector EndLocation = StarLocation + (camera->GetForwardVector() * fReachDistance);
 
 	FHitResult hit;
-	//FCollisionQueryParams TraceParams(FName(TEXT("")), true, GetOwner());  // false to ignore complex collisions and GetOwner() to ignore self
 
 	FCollisionQueryParams CollisionParam;
 	CollisionParam.AddIgnoredActor(this->GetOwner());
 
-	/*GetWorld()->LineTraceSingleByObjectType(
-		OUT hit,
-		StarLocation,
-		EndLocation,
-		FCollisionObjectQueryParams(ECollisionChannel::ECC_PhysicsBody),
-		TraceParams
-	);*/
-
-	DrawDebugLine(GetWorld(), StarLocation, EndLocation, FColor::Red, false, 1, 0, 1);
 	bool isHit = GetWorld()->LineTraceSingleByChannel(hit, StarLocation, EndLocation, ECC_Visibility, CollisionParam);
 
 	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), muzzleParticuleSystem, SpawnLocation, rotation, true);
@@ -55,8 +45,6 @@ void AMyWeapon::WeaponShoot(const FVector& origin, UCameraComponent* camera, con
 			AFPS_CollabGameMode* mymode = Cast<AFPS_CollabGameMode>(GetWorld()->GetAuthGameMode());
 			mymode->deleteEnnemy((AMyEnnemy*)hit.GetActor());
 			ActorHit->Destroy();
-
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("touch an ennemy"));
 		}
 	}
 
