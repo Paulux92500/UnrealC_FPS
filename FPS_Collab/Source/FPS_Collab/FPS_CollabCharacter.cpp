@@ -52,6 +52,16 @@ AFPS_CollabCharacter::AFPS_CollabCharacter()
 	// FP_Gun->SetupAttachment(Mesh1P, TEXT("GripPoint"));
 	FP_Gun->SetupAttachment(RootComponent);
 
+	// Create a gun mesh component
+	FP_AR = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FP_AR"));
+	FP_AR->SetOnlyOwnerSee(false);			// otherwise won't be visible in the multiplayer
+	FP_AR->bCastDynamicShadow = false;
+	FP_AR->CastShadow = false;
+	// FP_Gun->SetupAttachment(Mesh1P, TEXT("GripPoint"));
+	FP_AR->SetupAttachment(RootComponent);
+	FP_AR->SetHiddenInGame(false);
+	//FP_AR->SetRelativeRotation(FRotator(0.0f, 0.0f, 90.0f));
+
 	FP_MuzzleLocation = CreateDefaultSubobject<USceneComponent>(TEXT("MuzzleLocation"));
 	FP_MuzzleLocation->SetupAttachment(FP_Gun);
 	FP_MuzzleLocation->SetRelativeLocation(FVector(0.2f, 48.4f, -10.6f));
@@ -76,7 +86,6 @@ AFPS_CollabCharacter::AFPS_CollabCharacter()
 	VR_Gun->bCastDynamicShadow = false;
 	VR_Gun->CastShadow = false;
 	VR_Gun->SetupAttachment(R_MotionController);
-	VR_Gun->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
 
 	VR_MuzzleLocation = CreateDefaultSubobject<USceneComponent>(TEXT("VR_MuzzleLocation"));
 	VR_MuzzleLocation->SetupAttachment(VR_Gun);
@@ -94,6 +103,7 @@ void AFPS_CollabCharacter::BeginPlay()
 
 	//Attach gun mesh component to Skeleton, doing it here because the skeleton is not yet created in the constructor
 	FP_Gun->AttachToComponent(Mesh1P, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), TEXT("GripPoint"));
+	FP_AR->AttachToComponent(Mesh1P, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), TEXT("GripPoint"));
 
 	// Show or hide the two versions of the gun based on whether or not we're using motion controllers.
 	if (bUsingMotionControllers)
@@ -122,6 +132,8 @@ void AFPS_CollabCharacter::BeginPlay()
 
 	_currentWeaponIndex = 0;
 	fWeaponCooldown = _weapons[1]->fWeaponCooldown;
+
+	FP_AR->SetRelativeRotation(FRotator(0.0f, 90.0f, 0.0f));
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -250,10 +262,13 @@ void AFPS_CollabCharacter::SwitchWeapon() {
 
 	if (_currentWeaponIndex == 0) {
 		_currentWeaponIndex = 1;
-
+		FP_Gun->SetHiddenInGame(false);
+		FP_AR->SetHiddenInGame(true);
 	}
 	else {
 		_currentWeaponIndex = 0;
+		FP_Gun->SetHiddenInGame(true);
+		FP_AR->SetHiddenInGame(false);
 
 	}
 }

@@ -52,14 +52,8 @@ class AFPS_CollabCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 		UMotionControllerComponent* L_MotionController;
 
-
 public:
 	AFPS_CollabCharacter();
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Mesh)
-		USkeletalMeshComponent* FP_Gun;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Mesh)
-		USkeletalMeshComponent* FP_AR;
 
 protected:
 	virtual void BeginPlay();
@@ -103,6 +97,12 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = Weapon)
 		TSubclassOf<class AMyAssaultRifle> _secondWeapon;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Weapon)
+		USkeletalMeshComponent* FP_Gun;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Weapon)
+		USkeletalMeshComponent* FP_AR;
 
 
 protected:
