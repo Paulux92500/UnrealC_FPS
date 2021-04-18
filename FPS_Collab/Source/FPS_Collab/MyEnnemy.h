@@ -27,6 +27,10 @@ protected:
 
 public:	
 
+	float f_life;
+
+	bool BA_TakeDamage(float damage);
+
 	class AAIController* pController;
 
 	// Called every frame

@@ -7,11 +7,10 @@
 #include "AIController.h"
 
 // Sets default values
-AMyEnnemy::AMyEnnemy()
+AMyEnnemy::AMyEnnemy(): f_life(30)
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
 }
 
 void AMyEnnemy::MoveToTarget(AFPS_CollabCharacter* Target)
@@ -28,6 +27,12 @@ void AMyEnnemy::MoveToTarget(AFPS_CollabCharacter* Target)
 
         pController->MoveTo(MoveRequest, &NavPath);
     }
+}
+
+bool AMyEnnemy::BA_TakeDamage(float damage)
+{
+    f_life -= damage;
+    return  f_life <= 0;
 }
 
 // Called when the game starts or when spawned

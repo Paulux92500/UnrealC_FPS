@@ -3,6 +3,9 @@
 #include "FPS_CollabCharacter.h"
 #include "FPS_CollabProjectile.h"
 #include "Animation/AnimInstance.h"
+#include "MyWeapon.h"
+#include "MyPistoll.h"
+#include "MyAssaultRifle.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
@@ -103,10 +106,47 @@ void AFPS_CollabCharacter::BeginPlay()
 		VR_Gun->SetHiddenInGame(true, true);
 		Mesh1P->SetHiddenInGame(false, true);
 	}
+
+	// Adds the weapons
+	UWorld* const World = GetWorld();
+
+
+	if (World != nullptr) {
+
+		const FRotator SpawnRotation = VR_MuzzleLocation->GetComponentRotation();
+		const FVector SpawnLocation = VR_MuzzleLocation->GetComponentLocation();
+
+		_weapons.Push(World->SpawnActor<AMyPistoll>(_firstWeapon, SpawnLocation, SpawnRotation));
+		_weapons.Push(World->SpawnActor<AMyAssaultRifle>(_secondWeapon, SpawnLocation, SpawnRotation));
+	}
+
+	_currentWeaponIndex = 0;
+	fWeaponCooldown = _weapons[1]->fWeaponCooldown;
 }
 
 //////////////////////////////////////////////////////////////////////////
 // Input
+
+
+void AFPS_CollabCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (bCanShootAuto && _currentWeaponIndex == 1 && _weapons[_currentWeaponIndex]->HasEnoughBullet()) {
+
+		if (fWeaponTimer < GetGameTimeSinceCreation()) {
+			UE_LOG(LogTemp, Warning, TEXT("AR"));
+			OnFire();
+
+			fWeaponTimer += fWeaponCooldown;
+		}
+
+	}
+}
+
+void AFPS_CollabCharacter::ReloadWeapon() {
+	_weapons[_currentWeaponIndex]->WeaponReload();
+}
 
 void AFPS_CollabCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
@@ -118,7 +158,10 @@ void AFPS_CollabCharacter::SetupPlayerInputComponent(class UInputComponent* Play
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
 	// Bind fire event
-	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AFPS_CollabCharacter::OnFire);
+	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AFPS_CollabCharacter::WeaponTypeShoot);
+	PlayerInputComponent->BindAction("Fire", IE_Released, this, &AFPS_CollabCharacter::ResetAutoShoot);
+
+	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &AFPS_CollabCharacter::ReloadWeapon);
 
 	// Enable touchscreen input
 	EnableTouchscreenMovement(PlayerInputComponent);
@@ -136,13 +179,33 @@ void AFPS_CollabCharacter::SetupPlayerInputComponent(class UInputComponent* Play
 	PlayerInputComponent->BindAxis("TurnRate", this, &AFPS_CollabCharacter::TurnAtRate);
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
 	PlayerInputComponent->BindAxis("LookUpRate", this, &AFPS_CollabCharacter::LookUpAtRate);
+
+
+
+	// Switch weapon input
+	PlayerInputComponent->BindAction("SwitchWeapon", IE_Pressed, this, &AFPS_CollabCharacter::SwitchWeapon);
+}
+
+void AFPS_CollabCharacter::SetAutoShoot() {
+
+	if (_currentWeaponIndex == 1) {
+		bCanShootAuto = !bCanShootAuto;
+		fWeaponTimer = GetGameTimeSinceCreation();
+	}
+
+}
+
+void AFPS_CollabCharacter::ResetAutoShoot() {
+
+	if (_currentWeaponIndex == 1) {
+		bCanShootAuto = false;
+	}
+
 }
 
 void AFPS_CollabCharacter::OnFire()
 {
-	// try and fire a projectile
-	if (ProjectileClass != nullptr)
-	{
+	
 		UWorld* const World = GetWorld();
 		if (World != nullptr)
 		{
@@ -150,23 +213,20 @@ void AFPS_CollabCharacter::OnFire()
 			{
 				const FRotator SpawnRotation = VR_MuzzleLocation->GetComponentRotation();
 				const FVector SpawnLocation = VR_MuzzleLocation->GetComponentLocation();
-				World->SpawnActor<AFPS_CollabProjectile>(ProjectileClass, SpawnLocation, SpawnRotation);
+
 			}
 			else
 			{
 				const FRotator SpawnRotation = GetControlRotation();
-				// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
-				const FVector SpawnLocation = ((FP_MuzzleLocation != nullptr) ? FP_MuzzleLocation->GetComponentLocation() : GetActorLocation()) + SpawnRotation.RotateVector(GunOffset);
 
-				//Set Spawn Collision Handling Override
-				FActorSpawnParameters ActorSpawnParams;
-				ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
+				FVector StartLocation = FirstPersonCameraComponent->GetComponentLocation() + FirstPersonCameraComponent->GetForwardVector();
 
-				// spawn the projectile at the muzzle
-				World->SpawnActor<AFPS_CollabProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
+				FVector LineTraceEnd = StartLocation + FirstPersonCameraComponent->GetForwardVector();
+
+				_weapons[_currentWeaponIndex]->WeaponShoot(StartLocation, FirstPersonCameraComponent, SpawnRotation, GunOffset, muzzleParticuleSystem, impactParticuleSystem, FP_MuzzleLocation);
 			}
 		}
-	}
+	
 
 	// try and play the sound if specified
 	if (FireSound != nullptr)
@@ -184,6 +244,34 @@ void AFPS_CollabCharacter::OnFire()
 			AnimInstance->Montage_Play(FireAnimation, 1.f);
 		}
 	}
+}
+
+void AFPS_CollabCharacter::SwitchWeapon() {
+
+	if (_currentWeaponIndex == 0) {
+		_currentWeaponIndex = 1;
+
+	}
+	else {
+		_currentWeaponIndex = 0;
+
+	}
+}
+
+
+void AFPS_CollabCharacter::WeaponTypeShoot()
+{
+
+	if (_currentWeaponIndex == 0 && _weapons[_currentWeaponIndex]->HasEnoughBullet()) {
+		OnFire();
+		UE_LOG(LogTemp, Warning, TEXT("Pistol"));
+	}
+	else if (_currentWeaponIndex == 1) {
+		UE_LOG(LogTemp, Warning, TEXT("AR"));
+		SetAutoShoot();
+	}
+
+
 }
 
 void AFPS_CollabCharacter::OnResetVR()
@@ -216,43 +304,7 @@ void AFPS_CollabCharacter::EndTouch(const ETouchIndex::Type FingerIndex, const F
 	TouchItem.bIsPressed = false;
 }
 
-//Commenting this section out to be consistent with FPS BP template.
-//This allows the user to turn without using the right virtual joystick
 
-//void AFPS_CollabCharacter::TouchUpdate(const ETouchIndex::Type FingerIndex, const FVector Location)
-//{
-//	if ((TouchItem.bIsPressed == true) && (TouchItem.FingerIndex == FingerIndex))
-//	{
-//		if (TouchItem.bIsPressed)
-//		{
-//			if (GetWorld() != nullptr)
-//			{
-//				UGameViewportClient* ViewportClient = GetWorld()->GetGameViewport();
-//				if (ViewportClient != nullptr)
-//				{
-//					FVector MoveDelta = Location - TouchItem.Location;
-//					FVector2D ScreenSize;
-//					ViewportClient->GetViewportSize(ScreenSize);
-//					FVector2D ScaledDelta = FVector2D(MoveDelta.X, MoveDelta.Y) / ScreenSize;
-//					if (FMath::Abs(ScaledDelta.X) >= 4.0 / ScreenSize.X)
-//					{
-//						TouchItem.bMoved = true;
-//						float Value = ScaledDelta.X * BaseTurnRate;
-//						AddControllerYawInput(Value);
-//					}
-//					if (FMath::Abs(ScaledDelta.Y) >= 4.0 / ScreenSize.Y)
-//					{
-//						TouchItem.bMoved = true;
-//						float Value = ScaledDelta.Y * BaseTurnRate;
-//						AddControllerPitchInput(Value);
-//					}
-//					TouchItem.Location = Location;
-//				}
-//				TouchItem.Location = Location;
-//			}
-//		}
-//	}
-//}
 
 void AFPS_CollabCharacter::MoveForward(float Value)
 {
@@ -292,9 +344,9 @@ bool AFPS_CollabCharacter::EnableTouchscreenMovement(class UInputComponent* Play
 		PlayerInputComponent->BindTouch(EInputEvent::IE_Released, this, &AFPS_CollabCharacter::EndTouch);
 
 		//Commenting this out to be more consistent with FPS BP template.
-		//PlayerInputComponent->BindTouch(EInputEvent::IE_Repeat, this, &AFPS_CollabCharacter::TouchUpdate);
+		//PlayerInputComponent->BindTouch(EInputEvent::IE_Repeat, this, &AFPS_Project19Character::TouchUpdate);
 		return true;
 	}
-	
+
 	return false;
 }
